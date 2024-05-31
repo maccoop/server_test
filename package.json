@@ -1,0 +1,18 @@
+{
+  "name": "die_again_server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "type": "commonjs",
+  "author": "jacat_games",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "collections": "^5.1.13",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
