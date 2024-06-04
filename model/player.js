@@ -2,7 +2,6 @@ module.exports = class Player{
     constructor() {
         this._uid = "";
         this._displayName = "";
-        this._roomId = "";
     }
 
     set UID(uid){
