@@ -6,6 +6,7 @@ const http = require('http');
 const Const = require('./config/Const.js');
 const DataConfig = require('./config/ServerConfig.js');
 const Parameter = require('./config/ParameterConfig.js');
+const ServerConfig = require('./config/ServerConfig.js');
 
 const app = express();
 const server = http.createServer(app);
@@ -25,7 +26,7 @@ const roomArray = new RoomData.RoomArray(DataConfig.MAX_ROOM);
 
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
-  });
+    });
 
 io.on(Parameter.CONNECTION, (client)=>{
     console.log('someone connected!');
@@ -33,30 +34,40 @@ io.on(Parameter.CONNECTION, (client)=>{
     var connected = false;
     var roomId = null;
     var indexPlayer;
+    var isLogin = false;
+    var admin = false;
     indexPlayer = PlayerJoin();
+
     if(indexPlayer == 0 || indexPlayer){
         connected = true;
         player.UID = indexPlayer;
         players[indexPlayer] = player;
-        client.emit(Const.CONNECTED, "Wellcome to DieAgain server!");
+        client.emit(Parameter.CONNECTED, Const.WELCOME);
     }
     else{
-        client.emit(Const.ERROR, "Server full!");
+        client.emit(Parameter.ERROR, Const.ERROR_SERVER_FULL);
         client.disconnect(true);
         return;
     }
-    client.on(Parameter.LOGIN, (name)=>{
+    client.on(Parameter.LOGIN, (json)=>{
         if(!connected){
             return;
         }
-        if(name==null)
+        if(!json)
         {
-            client.end();
+            client.disconnect(true);
             return;
         }
-        players[indexPlayer].displayName = name;
-        console.log( name + ' login!');
+        try{
+        var data = JSON.parse(json);
+        admin = data.publicKey == ServerConfig.PUBLIC_KEY;
+        player.displayName = data.name;
+        console.log( data.name + ' login!');
         client.emit(Parameter.LOGIN, player.UID);
+        }
+        catch{
+            client.emit(Parameter.ERROR,Const.ERROR_LOGIN_FAIL);
+        }
     });
     client.on(Parameter.DISCONNECTED, () =>{
         if(!connected)
@@ -74,10 +85,10 @@ io.on(Parameter.CONNECTION, (client)=>{
                 idRoom: roomId,
                 level: roomData.level
             }
-            client.emit("create-room", JSON.stringify(result));
+            client.emit(Parameter.CREATE_ROOM, JSON.stringify(result));
         }
         else{
-            client.emit(Const.ERROR, "Can't create more room!");
+            client.emit(Parameter.ERROR, Const.ERROR_ROOM_FULL);
         }
     });
     client.on(Parameter.JOIN_ROOM, (roomid) => {
@@ -95,13 +106,14 @@ io.on(Parameter.CONNECTION, (client)=>{
             io.to(roomId).emit(Parameter.NOTICE_PLAYER_JOIN, `${player.DisplayName} join!`);
         }
         else{
-            client.emit(Const.ERROR, "Can't join room!");
+            client.emit(Parameter.ERROR, Const.ERROR_ROOM_FULL);
         }
     });
     client.on(Parameter.QUIT_ROOM, (roomid) => {
         var result = roomArray.Quit(player.UID, roomid);
+        
         io.to(roomid).emit(Parameter.LEAVE_ROOM, player.UID);
-        client.emit(Parameter.QUIT_ROOM, "Quit Room Success!");
+        client.emit(Parameter.QUIT_ROOM, Const.SUCCESS_QUIT_ROOM);
     });
     client.on(Parameter.GET_ROOM_LIST, ()=>{
         if(!connected)
@@ -111,16 +123,17 @@ io.on(Parameter.CONNECTION, (client)=>{
     client.on(Parameter.UPDATE, (data)=>{
         if(!connected)
         {
-            client.emit(Const.ERROR, "You not login!");
+            client.emit(Parameter.ERROR, Const.ERROR_REQUIRE_LOGIN);
             return;
         }
         if( roomId != 0 && !roomId)
         {
-            client.emit(Const.ERROR, "You not join room!");
+            client.emit(Parameter.ERROR,Const.ERROR_REQUIRE_JOIN_ROOM);
             return;
         }
         io.to(roomId).emit(Parameter.UPDATE, JSON.stringify({
             id: player.UID,
+            name: player.displayName,
             data: data
         }));
     });
@@ -134,6 +147,9 @@ io.on(Parameter.CONNECTION, (client)=>{
         if(result)
             console.log(roomId +' on win at: ' + new_level);
         io.to(roomId).emit(Parameter.WIN, new_level);
+    })
+    client.on('ping', ()=>{
+        client.emit('pong');
     })
 });
 
@@ -177,7 +193,9 @@ function GetRoomList(){
             continue;
         result.rooms.push({
             id: roomArray.array[i].uuid,
-            name: roomArray.array[i].displayName
+            name: roomArray.array[i].displayName,
+            max: DataConfig.PLAYER_A_ROOM,
+            amount: roomArray.array.filter(x=>x).length
         })
     }
     var stringify = JSON.stringify(result);

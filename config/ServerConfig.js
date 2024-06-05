@@ -5,5 +5,6 @@ module.exports = Object.freeze({
     MAX_PLAYER: 100000,
     MAX_ROOM: 25000,
     PLAYER_A_ROOM: 16,
-    VERSION_APP: '20'
+    VERSION_APP: '20',
+    PUBLIC_KEY: ""
 });

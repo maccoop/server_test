@@ -11,5 +11,9 @@ module.exports = Object.freeze({
     LOSE: 'lose',
     NOTICE_PLAYER_JOIN: 'notice-player-join',
     LEAVE_ROOM: "leave-room",
-    WIN: 'win'
+    WIN: 'win',
+    SUCCESS: 'SUCCESS',
+    ERROR: 'ERROR',
+    MESSAGE: 'MESSAGE',
+    CONNECTED: 'connected'
 });
